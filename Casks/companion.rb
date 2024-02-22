@@ -11,5 +11,5 @@ cask "companion" do
   desc "App for music assistant"
   homepage "https://music-assistant.github.io/"
 
-  app "music-assistant-companion.app"
+  app "Music Assistant Companion.app"
 end
