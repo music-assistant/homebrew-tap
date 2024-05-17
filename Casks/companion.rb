@@ -1,7 +1,7 @@
 cask "companion" do
   arch arm: "aarch64", intel: "x64"
 
-  version "0.0.33"
+  version "0.0.45"
   sha256 arm:   "0c4d4afc31ded13fafdc4b58b6ae9447856c706cad34e2b5c5cc7161213f50c7",
          intel: "0c4d4afc31ded13fafdc4b58b6ae9447856c706cad34e2b5c5cc7161213f50c7"
 
