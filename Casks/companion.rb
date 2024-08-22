@@ -1,9 +1,9 @@
 cask "companion" do
   arch arm: "aarch64", intel: "x64"
 
-  version "0.0.67"
-  sha256 arm:   "e774cd0527c459df2d72abb7ad199e21c09b87aa58524d5af68ccf9f7a2e4cd1",
-         intel: "abd528803b61b47bd3f37809cf1d307da8449190d049ed19f1474e7c69b5abd6"
+  version "0.0.71"
+  sha256 arm:   "6c66126b9556ad354a7d6b3920b2f916588f95db708cc30ab3616ff55f53538c",
+         intel: "c09c0a6d3cec619b260b93a9d2a338c27229d33a5539c62038824aafa0044ffa"
 
   url "https://github.com/music-assistant/companion/releases/download/v#{version}/Music.Assistant.Companion_#{arch}.app.tar.gz",
       verified: "github.com/music-assistant/companion/"
