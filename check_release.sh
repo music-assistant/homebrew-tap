@@ -1,4 +1,4 @@
-# !/usr/bin/env bash
+#!/usr/bin/env bash
 RELEASES=('AARCH64_SHA256' 'X64_SHA256')
 
 TAG_NAME=$(curl -fsL \
@@ -11,7 +11,7 @@ export MUSIC_COMPANION_VERSION=$(echo "$TAG_NAME" | cut -d"v" -f 2 | cut -d"\"" 
 for i in "${RELEASES[@]}"
 do
     ARCH=$(echo "$i" | cut -f1 -d_ | tr '[:upper:]' '[:lower:]')
-    URL="https://github.com/music-assistant/companion/releases/download/v0.0.74/Music.Assistant.Companion_${ARCH}.app.tar.gz"
+    URL="https://github.com/music-assistant/companion/releases/download/v${MUSIC_COMPANION_VERSION}/Music.Assistant.Companion_${ARCH}.app.tar.gz"
     curl -sLO $URL
 
     SHA_FILE=$(shasum -a 256 "Music.Assistant.Companion_${ARCH}.app.tar.gz" | cut -d" " -f 1)
