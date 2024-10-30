@@ -10,7 +10,7 @@ export MUSIC_COMPANION_VERSION=$(echo "$TAG_NAME" | cut -d"v" -f 2 | cut -d"\"" 
 
 for i in "${RELEASES[@]}"
 do
-    ARCH=$(echo "$i" | cut -f1 -d_ | tr '[:upper:]' '[:lower:]')
+    ARCH=$(echo "${i}" | cut -f1 -d_ | tr '[:upper:]' '[:lower:]')
     URL="https://github.com/music-assistant/companion/releases/download/v${MUSIC_COMPANION_VERSION}/Music.Assistant.Companion_${ARCH}.app.tar.gz"
     curl -sLO $URL
 
