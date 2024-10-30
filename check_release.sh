@@ -13,15 +13,15 @@ export MUSIC_COMPANION_VERSION
 
 for i in "${RELEASES[@]}"
 do
-    ARCH_PART=$(echo "${i}" | cut -f1 -d_) || exit 1
-    ARCH=$(echo "${ARCH_PART}" | tr '[:upper:]' '[:lower:]') || exit 1
-    URL="https://github.com/music-assistant/companion/releases/download/v${MUSIC_COMPANION_VERSION}/Music.Assistant.Companion_${ARCH}.app.tar.gz"
-    curl -sLO "${URL}"
+  ARCH_PART=$(echo "${i}" | cut -f1 -d_) || exit 1
+  ARCH=$(echo "${ARCH_PART}" | tr '[:upper:]' '[:lower:]') || exit 1
+  URL="https://github.com/music-assistant/companion/releases/download/v${MUSIC_COMPANION_VERSION}/Music.Assistant.Companion_${ARCH}.app.tar.gz"
+  curl -sLO "${URL}"
 
-    SHA_RESULT=$(shasum -a 256 "Music.Assistant.Companion_${ARCH}.app.tar.gz") || exit 1
-    SHA_FILE=$(echo "${SHA_RESULT}" | cut -d" " -f 1) || exit 1
+  SHA_RESULT=$(shasum -a 256 "Music.Assistant.Companion_${ARCH}.app.tar.gz") || exit 1
+  SHA_FILE=$(echo "${SHA_RESULT}" | cut -d" " -f 1) || exit 1
 
-    export "${i}"="${SHA_FILE}"
+  export "${i}"="${SHA_FILE}"
 done
 
-envsubst < companion.template.rb > Casks/companion.rb
+envsubst <companion.template.rb >Casks/companion.rb
