@@ -19,4 +19,4 @@ do
     export $i=$SHA_FILE
 done
 
-cat Casks/companion.template.rb | envsubst > Casks/companion.rb
+cat companion.template.rb | envsubst > Casks/companion.rb
