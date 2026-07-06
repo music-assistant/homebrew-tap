@@ -1,0 +1,99 @@
+name: Update casks
+
+on:
+  repository_dispatch:
+    types: [update-formula, update-cask]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version to update to, without v prefix"
+        required: true
+        type: string
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            VERSION="${{ github.event.client_payload.version }}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+
+          VERSION="${VERSION#v}"
+          if [ -z "$VERSION" ]; then
+            echo "version is required" >&2
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download release assets and compute checksums
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          curl -fsSL -o macos-arm.tar.gz \
+            "https://github.com/music-assistant/desktop-app/releases/download/${VERSION}/Music.Assistant_${VERSION}_aarch64.app.tar.gz"
+          curl -fsSL -o macos-intel.tar.gz \
+            "https://github.com/music-assistant/desktop-app/releases/download/${VERSION}/Music.Assistant_${VERSION}_x64.app.tar.gz"
+
+          echo "SHA_MACOS_ARM=$(shasum -a 256 macos-arm.tar.gz | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
+          echo "SHA_MACOS_INTEL=$(shasum -a 256 macos-intel.tar.gz | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
+
+      - name: Update casks
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          write_cask() {
+            local token="$1"
+            cat > "Casks/${token}.rb" <<EOF
+          cask "${token}" do
+            arch arm: "aarch64", intel: "x64"
+
+            version "${VERSION}"
+            sha256 arm:   "${SHA_MACOS_ARM}",
+                   intel: "${SHA_MACOS_INTEL}"
+
+            url "https://github.com/music-assistant/desktop-app/releases/download/#{version}/Music.Assistant_#{version}_#{arch}.app.tar.gz",
+                verified: "github.com/music-assistant/desktop-app/"
+            name "Music Assistant"
+            desc "Desktop app for Music Assistant"
+            homepage "https://music-assistant.io/"
+
+            app "Music Assistant.app"
+          end
+          EOF
+          }
+
+          write_cask music-assistant
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/music-assistant.rb cask_renames.json
+
+          if git diff --cached --quiet; then
+            echo "Casks are already up to date"
+            exit 0
+          fi
+
+          git commit -m "Update Music Assistant casks to ${{ steps.version.outputs.version }}"
+          git push
