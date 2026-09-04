@@ -10,90 +10,116 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
+concurrency:
+  group: update-cask
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
     steps:
-      - uses: actions/checkout@v7
+      - name: Create tap token
+        id: tap_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.MUSIC_ASSISTANT_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.MUSIC_ASSISTANT_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.tap_token.outputs.token }}
+          persist-credentials: false
 
       - name: Get version
         id: version
-        shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            VERSION="${{ github.event.client_payload.version }}"
+          set -euo pipefail
+
+          if [ "$GITHUB_EVENT_NAME" = "repository_dispatch" ]; then
+            VERSION="$DISPATCH_VERSION"
           else
-            VERSION="${{ github.event.inputs.version }}"
+            VERSION="$INPUT_VERSION"
           fi
 
           VERSION="${VERSION#v}"
-          if [ -z "$VERSION" ]; then
-            echo "version is required" >&2
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$VERSION' is not a valid release version"
             exit 1
           fi
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        env:
+          DISPATCH_VERSION: ${{ github.event.client_payload.version }}
+          INPUT_VERSION: ${{ inputs.version }}
 
       - name: Download release assets and compute checksums
-        shell: bash
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
 
-          curl -fsSL -o macos-arm.tar.gz \
-            "https://github.com/music-assistant/desktop-app/releases/download/${VERSION}/Music.Assistant_${VERSION}_aarch64.app.tar.gz"
-          curl -fsSL -o macos-intel.tar.gz \
-            "https://github.com/music-assistant/desktop-app/releases/download/${VERSION}/Music.Assistant_${VERSION}_x64.app.tar.gz"
+          BASE="https://github.com/music-assistant/desktop-app/releases/download/${VERSION}"
+
+          curl -fsSL -o macos-arm.tar.gz "${BASE}/Music.Assistant_${VERSION}_aarch64.app.tar.gz"
+          curl -fsSL -o macos-intel.tar.gz "${BASE}/Music.Assistant_${VERSION}_x64.app.tar.gz"
 
           echo "SHA_MACOS_ARM=$(shasum -a 256 macos-arm.tar.gz | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
           echo "SHA_MACOS_INTEL=$(shasum -a 256 macos-intel.tar.gz | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
 
-      - name: Update casks
-        shell: bash
+          rm -f macos-arm.tar.gz macos-intel.tar.gz
+
+      - name: Write cask
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
 
-          write_cask() {
-            local token="$1"
-            cat > "Casks/${token}.rb" <<EOF
-          cask "${token}" do
+          cat > Casks/music-assistant.rb <<EOF
+          cask "music-assistant" do
             arch arm: "aarch64", intel: "x64"
 
             version "${VERSION}"
             sha256 arm:   "${SHA_MACOS_ARM}",
                    intel: "${SHA_MACOS_INTEL}"
 
-            url "https://github.com/music-assistant/desktop-app/releases/download/#{version}/Music.Assistant_#{version}_#{arch}.app.tar.gz",
-                verified: "github.com/music-assistant/desktop-app/"
+            url "https://github.com/music-assistant/desktop-app/releases/download/#{version}/Music.Assistant_#{version}_#{arch}.app.tar.gz"
             name "Music Assistant"
             desc "Desktop app for Music Assistant"
             homepage "https://music-assistant.io/"
 
+            depends_on :macos
+
             app "Music Assistant.app"
           end
           EOF
-          }
 
-          write_cask music-assistant
+      - name: Create pull request
+        id: cask_pr
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.tap_token.outputs.token }}
+          commit-message: "Update Music Assistant cask to ${{ steps.version.outputs.version }}"
+          sign-commits: true
+          branch: "auto-update-cask-${{ steps.version.outputs.version }}"
+          base: main
+          delete-branch: true
+          title: "Update Music Assistant cask to ${{ steps.version.outputs.version }}"
+          body: |
+            Bump the `music-assistant` cask to [${{ steps.version.outputs.version }}](https://github.com/music-assistant/desktop-app/releases/tag/${{ steps.version.outputs.version }}).
 
-      - name: Commit and push
-        shell: bash
-        run: |
-          set -euo pipefail
+            Checksums were computed from the published macOS release assets.
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/music-assistant.rb cask_renames.json
-
-          if git diff --cached --quiet; then
-            echo "Casks are already up to date"
-            exit 0
-          fi
-
-          git commit -m "Update Music Assistant casks to ${{ steps.version.outputs.version }}"
-          git push
+      - name: Enable auto-merge
+        if: steps.cask_pr.outputs.pull-request-operation == 'created'
+        env:
+          GH_TOKEN: ${{ steps.tap_token.outputs.token }}
+          PR_URL: ${{ steps.cask_pr.outputs.pull-request-url }}
+        run: gh pr merge --auto --squash "$PR_URL"
