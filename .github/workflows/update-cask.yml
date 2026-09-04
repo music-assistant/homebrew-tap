@@ -90,11 +90,12 @@ jobs:
             sha256 arm:   "${SHA_MACOS_ARM}",
                    intel: "${SHA_MACOS_INTEL}"
 
-            url "https://github.com/music-assistant/desktop-app/releases/download/#{version}/Music.Assistant_#{version}_#{arch}.app.tar.gz",
-                verified: "github.com/music-assistant/desktop-app/"
+            url "https://github.com/music-assistant/desktop-app/releases/download/#{version}/Music.Assistant_#{version}_#{arch}.app.tar.gz"
             name "Music Assistant"
             desc "Desktop app for Music Assistant"
             homepage "https://music-assistant.io/"
+
+            depends_on :macos
 
             app "Music Assistant.app"
           end
