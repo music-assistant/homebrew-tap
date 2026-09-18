@@ -1,0 +1,19 @@
+name: "Periodic check and update of the Cask tap"
+on:
+  schedule:
+    - cron: "0 */2 * * *"
+jobs:
+  check_and_update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run updating script
+        run: ./check_release.sh
+
+      - name: Commit & Push changes
+        uses: actions-js/push@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: "main"
+          message: "Updated to latest version."
