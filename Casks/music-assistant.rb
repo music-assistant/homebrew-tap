@@ -1,9 +1,9 @@
 cask "music-assistant" do
   arch arm: "aarch64", intel: "x64"
 
-  version "0.7.1"
-  sha256 arm:   "49a2887182397f9b6f5321d84532da2bb91d09e88f376412cc0e845463441891",
-         intel: "cb12f23a40991625dfee3201ae649f09039e328f4ce3999c9cde5060aced8a0b"
+  version "0.7.2"
+  sha256 arm:   "fc071cac2cd1e496226448ba8fd1d17f12dc45b0725691a94aba8e2827b047c7",
+         intel: "1785c91f11272909ca05026dc3cbc28f7354a34c23a30438b1801f8a09c4a0f0"
 
   url "https://github.com/music-assistant/desktop-app/releases/download/#{version}/Music.Assistant_#{version}_#{arch}.app.tar.gz"
   name "Music Assistant"
